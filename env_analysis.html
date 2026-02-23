@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Environmental Risk & Opportunity Analysis - Storm ID</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Helvetica Now', Helvetica, Arial, sans-serif; 
+            background: #f5f5f5; 
+            color: #333;
+            line-height: 1.6;
+        }
+        .header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #333 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        .header h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+        .header p { opacity: 0.8; font-size: 0.95rem; }
+        
+        .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+        
+        .section {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .section h2 {
+            font-size: 1.2rem;
+            color: #1a1a1a;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        /* Connection diagram */
+        .connection-diagram {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        .conn-box {
+            background: #f8f8f8;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            position: relative;
+        }
+        .conn-box h3 {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+        .conn-box .count {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #1a1a1a;
+        }
+        .conn-box.scoring { border-color: #6c5ce7; }
+        .conn-box.risks { border-color: #e74c3c; }
+        .conn-box.opps { border-color: #27ae60; }
+        .conn-box.objectives { border-color: #3498db; }
+        
+        .flow-arrows {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+        .flow-arrow {
+            background: #eee;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: #666;
+        }
+        .flow-arrow::after {
+            content: " →";
+        }
+        
+        /* Risk matrix */
+        .risk-matrix {
+            display: grid;
+            grid-template-columns: auto repeat(5, 1fr);
+            gap: 2px;
+            margin: 1rem 0;
+            font-size: 0.75rem;
+        }
+        .matrix-cell {
+            padding: 0.5rem;
+            text-align: center;
+            border-radius: 4px;
+        }
+        .matrix-header {
+            background: #333;
+            color: white;
+            font-weight: bold;
+        }
+        .matrix-label {
+            background: #f0f0f0;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .risk-low { background: #d4edda; }
+        .risk-medium { background: #fff3cd; }
+        .risk-high { background: #f8d7da; }
+        .risk-critical { background: #e74c3c; color: white; }
+        .has-risk {
+            font-weight: bold;
+            border: 2px solid #333;
+        }
+        
+        /* Charts grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+        .chart-box {
+            background: #fafafa;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        .chart-box h3 {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+        
+        /* Traceability table */
+        .trace-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        .trace-table th, .trace-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .trace-table th {
+            background: #f5f5f5;
+            font-weight: 600;
+            color: #555;
+        }
+        .trace-table tr:hover {
+            background: #f9f9f9;
+        }
+        .tag {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin: 0.1rem;
+        }
+        .tag-risk { background: #fde8e8; color: #c53030; }
+        .tag-opp { background: #e6fffa; color: #234e52; }
+        .tag-kpi { background: #ebf4ff; color: #2b6cb0; }
+        
+        /* Gap analysis */
+        .gap-item {
+            background: #fff8e6;
+            border-left: 4px solid #f59e0b;
+            padding: 1rem;
+            margin: 0.75rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .gap-item h4 {
+            color: #b45309;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+        .gap-item p {
+            font-size: 0.85rem;
+            color: #666;
+        }
+        
+        .covered-item {
+            background: #e6fff0;
+            border-left: 4px solid #10b981;
+            padding: 1rem;
+            margin: 0.75rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .covered-item h4 {
+            color: #047857;
+            font-size: 0.9rem;
+        }
+        
+        /* Summary stats */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        .stat-card {
+            text-align: center;
+            padding: 1rem;
+            border-radius: 8px;
+        }
+        .stat-card.green { background: #d1fae5; }
+        .stat-card.yellow { background: #fef3c7; }
+        .stat-card.red { background: #fee2e2; }
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        .stat-card .label {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin: 1rem 0;
+            font-size: 0.8rem;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Environmental Risk & Opportunity Analysis</h1>
+        <p>Storm ID - ISO 14001 aligned EMS documentation review</p>
+    </div>
+    
+    <div class="container">
+        <!-- How tabs connect -->
+        <div class="section">
+            <h2>1. How the four tabs connect</h2>
+            
+            <div class="connection-diagram">
+                <div class="conn-box scoring">
+                    <h3>Impact & Aspect Score</h3>
+                    <div class="count">5×5</div>
+                    <p style="font-size:0.75rem;color:#666">Scoring matrix</p>
+                </div>
+                <div class="conn-box risks">
+                    <h3>Env Risk Log</h3>
+                    <div class="count">6</div>
+                    <p style="font-size:0.75rem;color:#666">Environmental risks</p>
+                </div>
+                <div class="conn-box opps">
+                    <h3>Opportunities</h3>
+                    <div class="count">6</div>
+                    <p style="font-size:0.75rem;color:#666">Strategic opportunities</p>
+                </div>
+                <div class="conn-box objectives">
+                    <h3>Objectives & KPIs</h3>
+                    <div class="count">7</div>
+                    <p style="font-size:0.75rem;color:#666">Measurable targets</p>
+                </div>
+            </div>
+            
+            <div class="flow-arrows">
+                <span class="flow-arrow">Scoring matrices define how to rate risks</span>
+                <span class="flow-arrow">Risks & opportunities feed into objectives</span>
+                <span class="flow-arrow" style="background:#d1fae5">Objectives have KPIs to track progress</span>
+            </div>
+            
+            <div style="background:#f8f8f8; padding:1rem; border-radius:8px; margin-top:1rem;">
+                <p style="font-size:0.9rem;"><strong>The logic flow:</strong></p>
+                <ol style="margin-left:1.5rem; font-size:0.85rem; color:#555;">
+                    <li><strong>Impact & Aspect Score</strong> + <strong>Env Risk Score</strong> provide the 5×5 matrices (Likelihood × Severity) to calculate risk ratings</li>
+                    <li><strong>Env Risk Log</strong> lists 6 identified risks, each scored using the matrices (ratings range 2-6, all Low to Medium)</li>
+                    <li><strong>Opportunities Register</strong> lists 6 opportunities (EOP1-6) that can mitigate risks or add value</li>
+                    <li><strong>Objectives & KPIs</strong> (bottom of Opportunities tab) links everything together with 7 objectives (EO1-7), each tied to specific risks, opportunities, and a measurable KPI</li>
+                </ol>
+            </div>
+        </div>
+        
+        <!-- Risk overview -->
+        <div class="section">
+            <h2>2. Current risk profile at a glance</h2>
+            
+            <div class="stats-row">
+                <div class="stat-card green">
+                    <div class="value">4</div>
+                    <div class="label">Low risks (1-5)</div>
+                </div>
+                <div class="stat-card yellow">
+                    <div class="value">2</div>
+                    <div class="label">Medium risks (6-10)</div>
+                </div>
+                <div class="stat-card red">
+                    <div class="value">0</div>
+                    <div class="label">High/Critical (11+)</div>
+                </div>
+            </div>
+            
+            <div class="charts-grid">
+                <div class="chart-box">
+                    <h3>Risk ratings distribution</h3>
+                    <canvas id="riskChart" height="200"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3>Risk matrix position</h3>
+                    <div class="risk-matrix">
+                        <div class="matrix-cell"></div>
+                        <div class="matrix-cell matrix-header">1-Minor</div>
+                        <div class="matrix-cell matrix-header">2-Low</div>
+                        <div class="matrix-cell matrix-header">3-Mod</div>
+                        <div class="matrix-cell matrix-header">4-Major</div>
+                        <div class="matrix-cell matrix-header">5-Severe</div>
+                        
+                        <div class="matrix-cell matrix-label">5-Very likely</div>
+                        <div class="matrix-cell risk-medium">5</div>
+                        <div class="matrix-cell risk-high">10</div>
+                        <div class="matrix-cell risk-high">15</div>
+                        <div class="matrix-cell risk-critical">20</div>
+                        <div class="matrix-cell risk-critical">25</div>
+                        
+                        <div class="matrix-cell matrix-label">4-Likely</div>
+                        <div class="matrix-cell risk-low">4</div>
+                        <div class="matrix-cell risk-medium">8</div>
+                        <div class="matrix-cell risk-high">12</div>
+                        <div class="matrix-cell risk-critical">16</div>
+                        <div class="matrix-cell risk-critical">20</div>
+                        
+                        <div class="matrix-cell matrix-label">3-Possible</div>
+                        <div class="matrix-cell risk-low">3</div>
+                        <div class="matrix-cell risk-medium has-risk">6<br><small>R4</small></div>
+                        <div class="matrix-cell risk-medium">9</div>
+                        <div class="matrix-cell risk-high">12</div>
+                        <div class="matrix-cell risk-high">15</div>
+                        
+                        <div class="matrix-cell matrix-label">2-Unlikely</div>
+                        <div class="matrix-cell risk-low">2</div>
+                        <div class="matrix-cell risk-low has-risk">4<br><small>R1</small></div>
+                        <div class="matrix-cell risk-medium">6</div>
+                        <div class="matrix-cell risk-medium">8</div>
+                        <div class="matrix-cell risk-high">10</div>
+                        
+                        <div class="matrix-cell matrix-label">1-Rare</div>
+                        <div class="matrix-cell risk-low">1</div>
+                        <div class="matrix-cell risk-low has-risk">2<br><small>R2,R3</small></div>
+                        <div class="matrix-cell risk-low has-risk">3<br><small>R5,R6</small></div>
+                        <div class="matrix-cell risk-low">4</div>
+                        <div class="matrix-cell risk-medium">5</div>
+                    </div>
+                    <div class="legend">
+                        <div class="legend-item"><div class="legend-color" style="background:#d4edda"></div> Low (1-5)</div>
+                        <div class="legend-item"><div class="legend-color" style="background:#fff3cd"></div> Medium (6-10)</div>
+                        <div class="legend-item"><div class="legend-color" style="background:#f8d7da"></div> High (11-15)</div>
+                        <div class="legend-item"><div class="legend-color" style="background:#e74c3c"></div> Critical (16-25)</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-box" style="margin-top:1rem;">
+                <h3>Risk ownership distribution</h3>
+                <canvas id="ownerChart" height="120"></canvas>
+            </div>
+        </div>
+        
+        <!-- Traceability -->
+        <div class="section">
+            <h2>3. Full traceability: Risks → Opportunities → Objectives → KPIs</h2>
+            <table class="trace-table">
+                <thead>
+                    <tr>
+                        <th>Objective</th>
+                        <th>Linked Risks</th>
+                        <th>Linked Opportunities</th>
+                        <th>KPI</th>
+                        <th>Target</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>EO1:</strong> Reduce carbon footprint (Scope 2 & 3)</td>
+                        <td><span class="tag tag-risk">R1</span><span class="tag tag-risk">R2</span><span class="tag tag-risk">R4</span></td>
+                        <td><span class="tag tag-opp">O1</span><span class="tag tag-opp">O5</span><span class="tag tag-opp">O6</span></td>
+                        <td><span class="tag tag-kpi">KPI1</span> Cloud carbon emissions</td>
+                        <td>Year-on-year reduction</td>
+                    </tr>
+                    <tr>
+                        <td><strong>EO2:</strong> Improve energy efficiency</td>
+                        <td><span class="tag tag-risk">R2</span></td>
+                        <td><span class="tag tag-opp">O1</span><span class="tag tag-opp">O5</span></td>
+                        <td><span class="tag tag-kpi">KPI2</span> Office energy (kWh)</td>
+                        <td>Downward trend</td>
+                    </tr>
+                    <tr>
+                        <td><strong>EO3:</strong> Environmental compliance</td>
+                        <td><span class="tag tag-risk">R3</span></td>
+                        <td><span class="tag tag-opp">O2</span></td>
+                        <td><span class="tag tag-kpi">KPI3</span> Compliance issues</td>
+                        <td>Zero non-compliances</td>
+                    </tr>
+                    <tr>
+                        <td><strong>EO4:</strong> Sustainable procurement</td>
+                        <td><span class="tag tag-risk">R4</span></td>
+                        <td><span class="tag tag-opp">O4</span><span class="tag tag-opp">O6</span></td>
+                        <td><span class="tag tag-kpi">KPI4</span> Supplier env. policies</td>
+                        <td>≥80%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>EO5:</strong> Employee awareness</td>
+                        <td><span class="tag tag-risk">R5</span></td>
+                        <td><span class="tag tag-opp">O3</span></td>
+                        <td><span class="tag tag-kpi">KPI5</span> Training participation</td>
+                        <td>≥90%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>EO6:</strong> Waste reduction</td>
+                        <td><span class="tag tag-risk">R6</span></td>
+                        <td><span class="tag tag-opp">O5</span></td>
+                        <td><span class="tag tag-kpi">KPI6</span> Recycling ratio</td>
+                        <td>Increasing</td>
+                    </tr>
+                    <tr>
+                        <td><strong>EO7:</strong> EMS maturity & audit readiness</td>
+                        <td><span class="tag tag-risk">R3</span><span class="tag tag-risk">R5</span></td>
+                        <td><span class="tag tag-opp">O2</span><span class="tag tag-opp">O4</span></td>
+                        <td><span class="tag tag-kpi">KPI7</span> Actions completed</td>
+                        <td>>95% on-time</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Coverage analysis -->
+        <div class="section">
+            <h2>4. Coverage analysis: Are all environmental aspects addressed?</h2>
+            
+            <h3 style="font-size:0.95rem; color:#047857; margin:1rem 0 0.5rem;">✓ Well covered areas</h3>
+            
+            <div class="covered-item">
+                <h4>Carbon & energy (Scope 2 & 3)</h4>
+                <p>R1 (cloud), R2 (office), R4 (supply chain) all feed into EO1 with cloud carbon KPI</p>
+            </div>
+            <div class="covered-item">
+                <h4>Regulatory compliance</h4>
+                <p>R3 mapped to EO3 with zero non-compliance target</p>
+            </div>
+            <div class="covered-item">
+                <h4>Employee engagement</h4>
+                <p>R5 mapped to EO5 with 90% training participation target</p>
+            </div>
+            <div class="covered-item">
+                <h4>Waste management</h4>
+                <p>R6 mapped to EO6 with recycling ratio tracking</p>
+            </div>
+            <div class="covered-item">
+                <h4>Supply chain sustainability</h4>
+                <p>R4 mapped to EO4 with 80% supplier policy target</p>
+            </div>
+            
+            <h3 style="font-size:0.95rem; color:#b45309; margin:1.5rem 0 0.5rem;">⚠ Gaps and areas for consideration</h3>
+            
+            <div class="gap-item">
+                <h4>No Scope 1 emissions addressed</h4>
+                <p>While likely minimal for a consultancy, any company vehicles, backup generators, or gas heating should be considered. Even if negligible, documenting this decision strengthens audit readiness.</p>
+            </div>
+            <div class="gap-item">
+                <h4>Water usage not mentioned</h4>
+                <p>ISO 14001 typically expects water as an environmental aspect. Even in a small office, documenting why it's excluded (or adding basic monitoring) would be prudent.</p>
+            </div>
+            <div class="gap-item">
+                <h4>Business travel emissions</h4>
+                <p>As a consultancy, client visits and conferences likely generate Scope 3 emissions. This isn't explicitly captured in R1-R6 or objectives.</p>
+            </div>
+            <div class="gap-item">
+                <h4>Remote working environmental impact</h4>
+                <p>With hybrid working mentioned, employee home energy use could be considered a Scope 3 factor. Increasingly expected in sustainability reporting.</p>
+            </div>
+            <div class="gap-item">
+                <h4>Biodiversity and land use</h4>
+                <p>Not relevant for most digital consultancies, but worth a documented exclusion rationale for completeness.</p>
+            </div>
+            <div class="gap-item">
+                <h4>Client project environmental impact</h4>
+                <p>The environmental footprint of systems Storm ID builds for clients (AI workloads, data processing) could be considered under Scope 3, particularly relevant given AI-first positioning.</p>
+            </div>
+        </div>
+        
+        <!-- What's missing -->
+        <div class="section">
+            <h2>5. Important items not documented</h2>
+            
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:1rem;">
+                <div style="background:#fef2f2; padding:1rem; border-radius:8px;">
+                    <h4 style="color:#991b1b; margin-bottom:0.5rem;">📋 Process gaps</h4>
+                    <ul style="font-size:0.85rem; color:#666; margin-left:1rem;">
+                        <li>No baseline data or current KPI values shown</li>
+                        <li>No review dates or last assessment dates</li>
+                        <li>No action completion status tracking</li>
+                        <li>No residual risk ratings (post-control)</li>
+                        <li>Risk trend indicators (↑↓→) missing</li>
+                    </ul>
+                </div>
+                <div style="background:#fef2f2; padding:1rem; border-radius:8px;">
+                    <h4 style="color:#991b1b; margin-bottom:0.5rem;">📊 Data gaps</h4>
+                    <ul style="font-size:0.85rem; color:#666; margin-left:1rem;">
+                        <li>No actual vs target performance data</li>
+                        <li>No historical trend information</li>
+                        <li>Opportunity references use O1-O6, but register uses EOP1-EOP6 (inconsistent)</li>
+                        <li>EOP6 (Strategic sustainability alignment) exists but isn't referenced in objectives</li>
+                    </ul>
+                </div>
+                <div style="background:#fef2f2; padding:1rem; border-radius:8px;">
+                    <h4 style="color:#991b1b; margin-bottom:0.5rem;">🔗 Linkage issues</h4>
+                    <ul style="font-size:0.85rem; color:#666; margin-left:1rem;">
+                        <li>EO6 references R6 but R6 appears in risk log without being fully traceable</li>
+                        <li>No link to ISO 14001 clause requirements</li>
+                        <li>Emergency preparedness not addressed (8.2 requirement)</li>
+                        <li>Interested parties and their requirements not mapped</li>
+                    </ul>
+                </div>
+                <div style="background:#fef2f2; padding:1rem; border-radius:8px;">
+                    <h4 style="color:#991b1b; margin-bottom:0.5rem;">📝 Documentation gaps</h4>
+                    <ul style="font-size:0.85rem; color:#666; margin-left:1rem;">
+                        <li>Version control / document history missing</li>
+                        <li>Approval signatures not shown</li>
+                        <li>Next review date not specified</li>
+                        <li>Scope boundaries not defined</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recommendations -->
+        <div class="section">
+            <h2>6. Quick wins to strengthen this register</h2>
+            <div style="display:grid; gap:0.75rem;">
+                <div style="display:flex; gap:1rem; align-items:flex-start; background:#f0fdf4; padding:1rem; border-radius:8px;">
+                    <span style="background:#10b981; color:white; padding:0.25rem 0.5rem; border-radius:4px; font-size:0.8rem;">1</span>
+                    <div>
+                        <strong>Add a baseline data column</strong>
+                        <p style="font-size:0.85rem; color:#666;">For each KPI, record the starting value and date. Without baselines, you can't demonstrate improvement.</p>
+                    </div>
+                </div>
+                <div style="display:flex; gap:1rem; align-items:flex-start; background:#f0fdf4; padding:1rem; border-radius:8px;">
+                    <span style="background:#10b981; color:white; padding:0.25rem 0.5rem; border-radius:4px; font-size:0.8rem;">2</span>
+                    <div>
+                        <strong>Fix the reference inconsistency</strong>
+                        <p style="font-size:0.85rem; color:#666;">Change "O1, O5, O6" references in objectives to "EOP1, EOP5, EOP6" to match the opportunities register.</p>
+                    </div>
+                </div>
+                <div style="display:flex; gap:1rem; align-items:flex-start; background:#f0fdf4; padding:1rem; border-radius:8px;">
+                    <span style="background:#10b981; color:white; padding:0.25rem 0.5rem; border-radius:4px; font-size:0.8rem;">3</span>
+                    <div>
+                        <strong>Add action status tracking</strong>
+                        <p style="font-size:0.85rem; color:#666;">For "Further Actions Required", add columns for: Due Date, Status (Not Started / In Progress / Complete), and Evidence Reference.</p>
+                    </div>
+                </div>
+                <div style="display:flex; gap:1rem; align-items:flex-start; background:#f0fdf4; padding:1rem; border-radius:8px;">
+                    <span style="background:#10b981; color:white; padding:0.25rem 0.5rem; border-radius:4px; font-size:0.8rem;">4</span>
+                    <div>
+                        <strong>Add business travel as R7</strong>
+                        <p style="font-size:0.85rem; color:#666;">Simple addition: "Emissions from business travel" with KPI "Travel emissions per FTE" - particularly relevant for consultancy work.</p>
+                    </div>
+                </div>
+                <div style="display:flex; gap:1rem; align-items:flex-start; background:#f0fdf4; padding:1rem; border-radius:8px;">
+                    <span style="background:#10b981; color:white; padding:0.25rem 0.5rem; border-radius:4px; font-size:0.8rem;">5</span>
+                    <div>
+                        <strong>Document scope exclusions</strong>
+                        <p style="font-size:0.85rem; color:#666;">Add a "Scope & Exclusions" section stating why water, biodiversity, etc. are excluded - auditors appreciate reasoned exclusions.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Risk rating chart
+        new Chart(document.getElementById('riskChart'), {
+            type: 'bar',
+            data: {
+                labels: ['R1 Cloud', 'R2 Office', 'R3 Compliance', 'R4 Supply chain', 'R5 Awareness', 'R6 Waste'],
+                datasets: [{
+                    label: 'Risk Rating',
+                    data: [4, 2, 2, 6, 3, 3],
+                    backgroundColor: ['#fcd34d', '#86efac', '#86efac', '#fcd34d', '#86efac', '#86efac'],
+                    borderColor: ['#f59e0b', '#22c55e', '#22c55e', '#f59e0b', '#22c55e', '#22c55e'],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 25,
+                        title: { display: true, text: 'Risk Rating (L×S)' }
+                    }
+                }
+            }
+        });
+        
+        // Owner chart
+        new Chart(document.getElementById('ownerChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Head of Compliance', 'Technical Director', 'HR Manager', 'Office Manager'],
+                datasets: [{
+                    data: [3, 1, 1, 1],
+                    backgroundColor: ['#6366f1', '#f59e0b', '#10b981', '#ec4899']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'right' }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
